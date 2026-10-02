@@ -1862,7 +1862,8 @@ footer span {
     <span id="musicText">Play Song For Ammi</span>
   </button>
 </div>
-<audio id="music" loop preload="auto" playsinline webkit-playsinline src="/birthday-song.mp3">
+<audio id="music" autoplay loop preload="auto" playsinline webkit-playsinline src="./birthday-song.mp3">
+  <source src="./birthday-song.mp3" type="audio/mpeg">
   <source src="/birthday-song.mp3" type="audio/mpeg">
 </audio>
 
@@ -2365,31 +2366,46 @@ if (musicBtn) {
 
 // Immediate Autoplay and First Gesture Trigger
 let hasInteractedForAudio = false;
+
 function triggerAutoplayOnGesture() {
-  if (hasInteractedForAudio) return;
-  hasInteractedForAudio = true;
   getAudioContext();
+  if (music && music.muted) {
+    music.muted = false;
+    music.volume = 1.0;
+  }
   if (!playing) {
     playBirthdayMusic();
   }
 }
 
-["click", "touchstart", "pointerdown", "keydown"].forEach(evt => {
-  window.addEventListener(evt, triggerAutoplayOnGesture, { once: true, passive: true });
+// Global capture phase listeners so no child stopPropagation() can block autoplay
+["click", "touchstart", "touchend", "pointerdown", "mousedown", "keydown"].forEach(evt => {
+  window.addEventListener(evt, triggerAutoplayOnGesture, { capture: true, passive: true });
+  document.addEventListener(evt, triggerAutoplayOnGesture, { capture: true, passive: true });
 });
 
-window.addEventListener("DOMContentLoaded", () => {
-  if (music) {
-    try { music.volume = 1.0; } catch (e) {}
-    playBirthdayMusic();
+function attemptImmediateAutoplay() {
+  if (!music) return;
+  music.muted = false;
+  music.volume = 1.0;
+  const p = music.play();
+  if (p !== undefined) {
+    p.then(() => {
+      setMusicPlayingUI(true);
+    }).catch(() => {
+      // Browser autoplay policy blocked unmuted sound on initial load.
+      // Play muted immediately so audio stream is primed, then automatically unmute on first gesture!
+      music.muted = true;
+      music.play().then(() => {
+        // Primed in muted mode
+      }).catch(() => {});
+    });
   }
-});
+}
 
-window.addEventListener("load", () => {
-  if (!playing) {
-    playBirthdayMusic();
-  }
-});
+window.addEventListener("DOMContentLoaded", attemptImmediateAutoplay);
+window.addEventListener("load", attemptImmediateAutoplay);
+attemptImmediateAutoplay();
 
 // Lock Screen Realtime Clock
 function updateLockClock() {
@@ -2458,8 +2474,15 @@ function startHold(e) {
   isHolding = true;
   holdStartTime = performance.now();
 
-  // Prime Web Audio context on the immediate user gesture
+  // Prime Web Audio context on the immediate user gesture & play birthday song immediately
   getAudioContext();
+  if (music && music.muted) {
+    music.muted = false;
+    music.volume = 1.0;
+  }
+  if (!playing) {
+    playBirthdayMusic();
+  }
 
   if (navigator.vibrate) {
     try { navigator.vibrate(35); } catch (v) {}
@@ -2570,6 +2593,17 @@ function triggerUnlockSuccess() {
 function remindToHoldLock(e) {
   if (isUnlocked) return;
   if (e) e.stopPropagation();
+
+  // Wake audio and play immediately on interaction
+  getAudioContext();
+  if (music && music.muted) {
+    music.muted = false;
+    music.volume = 1.0;
+  }
+  if (!playing) {
+    playBirthdayMusic();
+  }
+
   if (lockHeartBtn) {
     lockHeartBtn.classList.remove("shake");
     void lockHeartBtn.offsetWidth;
