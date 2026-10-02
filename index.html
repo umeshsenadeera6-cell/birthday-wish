@@ -1437,7 +1437,18 @@ footer span {
   transform: translateY(-3px) scale(1.03);
   background: linear-gradient(135deg, #ff407a 0%, #e11d61 100%);
   border-color: #fff;
-  box-shadow: 0 15px 40px rgba(244, 63, 122, 0.6);
+.lock-sound-hint {
+  font-size: 11px;
+  color: rgba(255, 220, 235, 0.88);
+  text-align: center;
+  margin-top: 6px;
+  padding: 5px 14px;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 180, 210, 0.25);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  letter-spacing: 0.3px;
 }
 </style>
 </head>
@@ -1479,6 +1490,7 @@ footer span {
       <button class="unlock-slider-btn" id="unlockBtn">
         <span>💖 Unlock My Surprise ✨</span>
       </button>
+      <div class="lock-sound-hint">🔊 Turn up phone volume & turn off Silent/Mute switch for music 🎶</div>
     </div>
 
   </div>
@@ -1492,7 +1504,7 @@ footer span {
     <span id="musicText">Play Song For Ammi</span>
   </button>
 </div>
-<audio id="music" loop preload="auto">
+<audio id="music" loop preload="auto" playsinline webkit-playsinline src="birthday-song.mp3">
   <source src="birthday-song.mp3" type="audio/mpeg">
   <source src="birthday-song.wav" type="audio/wav">
 </audio>
@@ -1875,17 +1887,51 @@ function stopSynthMusicBox() {
   }
 }
 
+// Pre-unlock mobile audio on first user touch anywhere
+let mobileAudioPrimed = false;
+function primeMobileAudio() {
+  if (mobileAudioPrimed) return;
+  mobileAudioPrimed = true;
+  if (music) {
+    music.load();
+  }
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass && !synthCtx) {
+      synthCtx = new AudioContextClass();
+    }
+    if (synthCtx && synthCtx.state === "suspended") {
+      synthCtx.resume();
+    }
+  } catch (e) {}
+}
+window.addEventListener("touchstart", primeMobileAudio, { once: true, passive: true });
+window.addEventListener("pointerdown", primeMobileAudio, { once: true, passive: true });
+window.addEventListener("click", primeMobileAudio, { once: true, passive: true });
+
 function playBirthdayMusic() {
   if (playing) return;
   setMusicPlayingUI(true);
 
+  // Resume Web Audio Context synchronously during the user gesture!
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass && !synthCtx) {
+      synthCtx = new AudioContextClass();
+    }
+    if (synthCtx && synthCtx.state === "suspended") {
+      synthCtx.resume();
+    }
+  } catch (e) {}
+
   if (music) {
+    music.currentTime = 0;
     const playPromise = music.play();
     if (playPromise !== undefined) {
       playPromise.then(() => {
-        // Successfully playing audio file
+        // Genuine MP3 playing smoothly
       }).catch((err) => {
-        console.warn("Audio element play error, using synth music box:", err);
+        console.warn("Audio element play error on mobile, using synth music box:", err);
         startSynthMusicBox();
       });
       return;
@@ -1930,9 +1976,15 @@ const lockNotification = document.getElementById("lockNotification");
 const lockIcon = document.getElementById("lockIcon");
 let isUnlocked = false;
 
-function unlockSite() {
+function unlockSite(e) {
+  if (e && e.cancelable && e.type === "touchend") {
+    e.preventDefault();
+  }
   if (isUnlocked) return;
   isUnlocked = true;
+
+  // Prime mobile audio immediately
+  primeMobileAudio();
 
   // Change lock icon to open and heart
   if (lockIcon) {
@@ -1956,16 +2008,33 @@ function unlockSite() {
   }
 }
 
-if (lockHeartBtn) lockHeartBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(); });
-if (unlockBtn) unlockBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(); });
-if (lockNotification) lockNotification.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(); });
+if (lockHeartBtn) {
+  lockHeartBtn.addEventListener("touchend", (e) => { e.stopPropagation(); unlockSite(e); });
+  lockHeartBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(e); });
+}
+if (unlockBtn) {
+  unlockBtn.addEventListener("touchend", (e) => { e.stopPropagation(); unlockSite(e); });
+  unlockBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(e); });
+}
+if (lockNotification) {
+  lockNotification.addEventListener("touchend", (e) => { e.stopPropagation(); unlockSite(e); });
+  lockNotification.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(e); });
+}
 if (lockscreen) {
-  lockscreen.addEventListener("click", unlockSite);
-  lockscreen.addEventListener("touchend", unlockSite, { passive: true });
+  lockscreen.addEventListener("touchend", (e) => { unlockSite(e); });
+  lockscreen.addEventListener("click", (e) => { unlockSite(e); });
 }
 
 // Music Button Toggle Logic
 if (musicBtn) {
+  musicBtn.addEventListener("touchend", (e) => {
+    e.stopPropagation();
+    if (!playing) {
+      playBirthdayMusic();
+    } else {
+      pauseBirthdayMusic();
+    }
+  });
   musicBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     if (!playing) {
