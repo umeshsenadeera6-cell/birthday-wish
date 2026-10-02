@@ -1504,8 +1504,8 @@ footer span {
     <span id="musicText">Play Song For Ammi</span>
   </button>
 </div>
-<audio id="music" loop preload="auto" playsinline webkit-playsinline src="birthday-song.mp3">
-  <source src="birthday-song.mp3" type="audio/mpeg">
+<audio id="music" loop preload="auto" playsinline webkit-playsinline src="/birthday-song.mp3">
+  <source src="/birthday-song.mp3" type="audio/mpeg">
 </audio>
 
 <!-- Hero Section with Ammi's Portrait -->
@@ -1791,8 +1791,8 @@ function getAudioContext() {
   return audioCtx;
 }
 
-// Pre-fetch and decode birthday-song.mp3 in the background so mobile has zero buffer lag
-fetch("birthday-song.mp3")
+// Pre-fetch and decode /birthday-song.mp3 in the background so mobile has zero buffer lag
+fetch("/birthday-song.mp3")
   .then(res => res.arrayBuffer())
   .then(buffer => {
     const ctx = getAudioContext();
