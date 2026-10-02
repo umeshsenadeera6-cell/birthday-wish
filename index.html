@@ -1504,7 +1504,7 @@ footer span {
     <span id="musicText">Play Song For Ammi</span>
   </button>
 </div>
-<audio id="music" loop preload="auto" playsinline webkit-playsinline src="birthday-song.mp3?v=2">
+<audio id="music" loop preload="auto" playsinline webkit-playsinline autoplay src="birthday-song.mp3?v=2">
   <source src="birthday-song.mp3?v=2" type="audio/mpeg">
 </audio>
 
@@ -1771,10 +1771,7 @@ const musicIcon = document.getElementById("musicIcon");
 const musicText = document.getElementById("musicText");
 let playing = false;
 
-// Web Audio API Music Box Chime Synthesizer Fallback
-let synthCtx = null;
-let synthTimer = null;
-
+// Web Audio API & Synth chimes removed - Pure MP3 playback
 function setMusicPlayingUI(isPlaying) {
   playing = isPlaying;
   if (musicBtn && musicIcon && musicText) {
@@ -1790,103 +1787,39 @@ function setMusicPlayingUI(isPlaying) {
   }
 }
 
-function startSynthMusicBox() {
-  if (synthTimer) return;
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (!AudioContextClass) return;
-    if (!synthCtx) {
-      synthCtx = new AudioContextClass();
-    }
-    if (synthCtx.state === "suspended") {
-      synthCtx.resume();
-    }
+// Keep audio state in sync with actual audio element
+if (music) {
+  music.addEventListener("play", () => setMusicPlayingUI(true));
+  music.addEventListener("pause", () => setMusicPlayingUI(false));
+  music.addEventListener("ended", () => {
+    music.currentTime = 0;
+    music.play().catch(() => {});
+  });
+}
 
-    // Happy Birthday notes and beats
-    const notes = [
-      { f: 261.63, d: 0.75 }, // C4
-      { f: 261.63, d: 0.25 }, // C4
-      { f: 293.66, d: 1.0 },  // D4
-      { f: 261.63, d: 1.0 },  // C4
-      { f: 349.23, d: 1.0 },  // F4
-      { f: 329.63, d: 2.0 },  // E4
+function playBirthdayMusic() {
+  if (!music) return;
+  if (playing) return;
 
-      { f: 261.63, d: 0.75 }, // C4
-      { f: 261.63, d: 0.25 }, // C4
-      { f: 293.66, d: 1.0 },  // D4
-      { f: 261.63, d: 1.0 },  // C4
-      { f: 392.00, d: 1.0 },  // G4
-      { f: 349.23, d: 2.0 },  // F4
-
-      { f: 261.63, d: 0.75 }, // C4
-      { f: 261.63, d: 0.25 }, // C4
-      { f: 523.25, d: 1.0 },  // C5
-      { f: 440.00, d: 1.0 },  // A4
-      { f: 349.23, d: 1.0 },  // F4
-      { f: 329.63, d: 1.0 },  // E4
-      { f: 293.66, d: 2.0 },  // D4
-
-      { f: 466.16, d: 0.75 }, // Bb4
-      { f: 466.16, d: 0.25 }, // Bb4
-      { f: 440.00, d: 1.0 },  // A4
-      { f: 349.23, d: 1.0 },  // F4
-      { f: 392.00, d: 1.0 },  // G4
-      { f: 349.23, d: 2.5 }   // F4
-    ];
-
-    const tempo = 0.55;
-    let currentNote = 0;
-
-    function playNote(freq, dur) {
-      if (!synthCtx || synthCtx.state === "closed") return;
-      const now = synthCtx.currentTime;
-      
-      const osc1 = synthCtx.createOscillator();
-      const osc2 = synthCtx.createOscillator();
-      const gain = synthCtx.createGain();
-
-      osc1.type = "sine";
-      osc1.frequency.setValueAtTime(freq, now);
-
-      osc2.type = "triangle";
-      osc2.frequency.setValueAtTime(freq * 2, now);
-
-      gain.gain.setValueAtTime(0.0001, now);
-      gain.gain.exponentialRampToValueAtTime(0.28, now + 0.03);
-      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur * tempo * 0.95);
-
-      osc1.connect(gain);
-      osc2.connect(gain);
-      gain.connect(synthCtx.destination);
-
-      osc1.start(now);
-      osc2.start(now);
-      osc1.stop(now + dur * tempo);
-      osc2.stop(now + dur * tempo);
-    }
-
-    function scheduleNext() {
-      if (!playing) return;
-      const item = notes[currentNote];
-      playNote(item.f, item.d);
-      currentNote = (currentNote + 1) % notes.length;
-      synthTimer = setTimeout(scheduleNext, item.d * tempo * 1000);
-    }
-
-    scheduleNext();
-  } catch (e) {
-    console.warn("Synth error:", e);
+  music.volume = 1.0;
+  const playPromise = music.play();
+  if (playPromise !== undefined) {
+    playPromise.then(() => {
+      setMusicPlayingUI(true);
+    }).catch((err) => {
+      console.log("Autoplay waiting for user gesture:", err);
+    });
   }
 }
 
-function stopSynthMusicBox() {
-  if (synthTimer) {
-    clearTimeout(synthTimer);
-    synthTimer = null;
+function pauseBirthdayMusic() {
+  if (music) {
+    music.pause();
   }
+  setMusicPlayingUI(false);
 }
 
-// Pre-unlock mobile audio on first user touch anywhere
+// Pre-unlock audio on first touch
 let mobileAudioPrimed = false;
 function primeMobileAudio() {
   if (mobileAudioPrimed) return;
@@ -1894,58 +1827,35 @@ function primeMobileAudio() {
   if (music) {
     music.load();
   }
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (AudioContextClass && !synthCtx) {
-      synthCtx = new AudioContextClass();
-    }
-    if (synthCtx && synthCtx.state === "suspended") {
-      synthCtx.resume();
-    }
-  } catch (e) {}
 }
-window.addEventListener("touchstart", primeMobileAudio, { once: true, passive: true });
-window.addEventListener("pointerdown", primeMobileAudio, { once: true, passive: true });
-window.addEventListener("click", primeMobileAudio, { once: true, passive: true });
 
-function playBirthdayMusic() {
-  if (playing) return;
-  setMusicPlayingUI(true);
-
-  // Resume Web Audio Context synchronously during the user gesture!
-  try {
-    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
-    if (AudioContextClass && !synthCtx) {
-      synthCtx = new AudioContextClass();
-    }
-    if (synthCtx && synthCtx.state === "suspended") {
-      synthCtx.resume();
-    }
-  } catch (e) {}
-
-  if (music) {
-    music.currentTime = 0;
-    const playPromise = music.play();
-    if (playPromise !== undefined) {
-      playPromise.then(() => {
-        // Genuine MP3 playing smoothly
-      }).catch((err) => {
-        console.warn("Audio element play error on mobile, using synth music box:", err);
-        startSynthMusicBox();
-      });
-      return;
-    }
+// Immediate Autoplay and First Gesture Trigger
+let hasInteractedForAudio = false;
+function triggerAutoplayOnGesture() {
+  if (hasInteractedForAudio) return;
+  hasInteractedForAudio = true;
+  primeMobileAudio();
+  if (music && !playing) {
+    playBirthdayMusic();
   }
-  startSynthMusicBox();
 }
 
-function pauseBirthdayMusic() {
+["click", "touchstart", "pointerdown", "keydown", "scroll"].forEach(evt => {
+  window.addEventListener(evt, triggerAutoplayOnGesture, { once: true, passive: true });
+});
+
+window.addEventListener("DOMContentLoaded", () => {
   if (music) {
-    music.pause();
+    music.volume = 1.0;
+    playBirthdayMusic();
   }
-  stopSynthMusicBox();
-  setMusicPlayingUI(false);
-}
+});
+
+window.addEventListener("load", () => {
+  if (music && !playing) {
+    playBirthdayMusic();
+  }
+});
 
 // Lock Screen Realtime Clock
 function updateLockClock() {
