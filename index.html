@@ -1492,7 +1492,10 @@ footer span {
     <span id="musicText">Play Song For Ammi</span>
   </button>
 </div>
-<audio id="music" loop><source src="birthday-song.mp3" type="audio/mpeg"></audio>
+<audio id="music" loop preload="auto">
+  <source src="birthday-song.mp3" type="audio/mpeg">
+  <source src="birthday-song.wav" type="audio/wav">
+</audio>
 
 <!-- Hero Section with Ammi's Portrait -->
 <section class="hero">
@@ -1750,6 +1753,155 @@ footer span {
 </div> <!-- /restOfSurprise -->
 
 <script>
+// Audio Player Elements & State
+const music = document.getElementById("music");
+const musicBtn = document.getElementById("musicBtn");
+const musicIcon = document.getElementById("musicIcon");
+const musicText = document.getElementById("musicText");
+let playing = false;
+
+// Web Audio API Music Box Chime Synthesizer Fallback
+let synthCtx = null;
+let synthTimer = null;
+
+function setMusicPlayingUI(isPlaying) {
+  playing = isPlaying;
+  if (musicBtn && musicIcon && musicText) {
+    if (isPlaying) {
+      musicIcon.textContent = "🔊";
+      musicText.textContent = "Playing For Ammi 🎶";
+      musicBtn.classList.add("playing");
+    } else {
+      musicIcon.textContent = "🎵";
+      musicText.textContent = "Play Song For Ammi";
+      musicBtn.classList.remove("playing");
+    }
+  }
+}
+
+function startSynthMusicBox() {
+  if (synthTimer) return;
+  try {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (!AudioContextClass) return;
+    if (!synthCtx) {
+      synthCtx = new AudioContextClass();
+    }
+    if (synthCtx.state === "suspended") {
+      synthCtx.resume();
+    }
+
+    // Happy Birthday notes and beats
+    const notes = [
+      { f: 261.63, d: 0.75 }, // C4
+      { f: 261.63, d: 0.25 }, // C4
+      { f: 293.66, d: 1.0 },  // D4
+      { f: 261.63, d: 1.0 },  // C4
+      { f: 349.23, d: 1.0 },  // F4
+      { f: 329.63, d: 2.0 },  // E4
+
+      { f: 261.63, d: 0.75 }, // C4
+      { f: 261.63, d: 0.25 }, // C4
+      { f: 293.66, d: 1.0 },  // D4
+      { f: 261.63, d: 1.0 },  // C4
+      { f: 392.00, d: 1.0 },  // G4
+      { f: 349.23, d: 2.0 },  // F4
+
+      { f: 261.63, d: 0.75 }, // C4
+      { f: 261.63, d: 0.25 }, // C4
+      { f: 523.25, d: 1.0 },  // C5
+      { f: 440.00, d: 1.0 },  // A4
+      { f: 349.23, d: 1.0 },  // F4
+      { f: 329.63, d: 1.0 },  // E4
+      { f: 293.66, d: 2.0 },  // D4
+
+      { f: 466.16, d: 0.75 }, // Bb4
+      { f: 466.16, d: 0.25 }, // Bb4
+      { f: 440.00, d: 1.0 },  // A4
+      { f: 349.23, d: 1.0 },  // F4
+      { f: 392.00, d: 1.0 },  // G4
+      { f: 349.23, d: 2.5 }   // F4
+    ];
+
+    const tempo = 0.55;
+    let currentNote = 0;
+
+    function playNote(freq, dur) {
+      if (!synthCtx || synthCtx.state === "closed") return;
+      const now = synthCtx.currentTime;
+      
+      const osc1 = synthCtx.createOscillator();
+      const osc2 = synthCtx.createOscillator();
+      const gain = synthCtx.createGain();
+
+      osc1.type = "sine";
+      osc1.frequency.setValueAtTime(freq, now);
+
+      osc2.type = "triangle";
+      osc2.frequency.setValueAtTime(freq * 2, now);
+
+      gain.gain.setValueAtTime(0.0001, now);
+      gain.gain.exponentialRampToValueAtTime(0.28, now + 0.03);
+      gain.gain.exponentialRampToValueAtTime(0.0001, now + dur * tempo * 0.95);
+
+      osc1.connect(gain);
+      osc2.connect(gain);
+      gain.connect(synthCtx.destination);
+
+      osc1.start(now);
+      osc2.start(now);
+      osc1.stop(now + dur * tempo);
+      osc2.stop(now + dur * tempo);
+    }
+
+    function scheduleNext() {
+      if (!playing) return;
+      const item = notes[currentNote];
+      playNote(item.f, item.d);
+      currentNote = (currentNote + 1) % notes.length;
+      synthTimer = setTimeout(scheduleNext, item.d * tempo * 1000);
+    }
+
+    scheduleNext();
+  } catch (e) {
+    console.warn("Synth error:", e);
+  }
+}
+
+function stopSynthMusicBox() {
+  if (synthTimer) {
+    clearTimeout(synthTimer);
+    synthTimer = null;
+  }
+}
+
+function playBirthdayMusic() {
+  if (playing) return;
+  setMusicPlayingUI(true);
+
+  if (music) {
+    const playPromise = music.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        // Successfully playing audio file
+      }).catch((err) => {
+        console.warn("Audio element play error, using synth music box:", err);
+        startSynthMusicBox();
+      });
+      return;
+    }
+  }
+  startSynthMusicBox();
+}
+
+function pauseBirthdayMusic() {
+  if (music) {
+    music.pause();
+  }
+  stopSynthMusicBox();
+  setMusicPlayingUI(false);
+}
+
 // Lock Screen Realtime Clock
 function updateLockClock() {
   const clockEl = document.getElementById("lockClock");
@@ -1788,56 +1940,41 @@ function unlockSite() {
     setTimeout(() => { lockIcon.textContent = "💖"; }, 250);
   }
 
-  // Play birthday music seamlessly on user gesture
-  if (!playing) {
-    music.play().then(() => {
-      musicIcon.textContent = "🔊";
-      musicText.textContent = "Playing For Ammi 🎶";
-      musicBtn.classList.add("playing");
-      playing = true;
-    }).catch(() => {});
-  }
+  // Play birthday music IMMEDIATELY upon unlock user interaction
+  playBirthdayMusic();
 
   // Confetti and floating hearts burst
   launchConfetti();
   launchBigHeartExplosion();
 
   // Animate lockscreen fade out
-  lockscreen.classList.add("unlocked");
-  setTimeout(() => {
-    lockscreen.style.display = "none";
-  }, 950);
+  if (lockscreen) {
+    lockscreen.classList.add("unlocked");
+    setTimeout(() => {
+      lockscreen.style.display = "none";
+    }, 950);
+  }
 }
 
-if (lockHeartBtn) lockHeartBtn.addEventListener("click", unlockSite);
-if (unlockBtn) unlockBtn.addEventListener("click", unlockSite);
-if (lockNotification) lockNotification.addEventListener("click", unlockSite);
+if (lockHeartBtn) lockHeartBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(); });
+if (unlockBtn) unlockBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(); });
+if (lockNotification) lockNotification.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(); });
+if (lockscreen) {
+  lockscreen.addEventListener("click", unlockSite);
+  lockscreen.addEventListener("touchend", unlockSite, { passive: true });
+}
 
-// Music Player Logic
-const music = document.getElementById("music");
-const musicBtn = document.getElementById("musicBtn");
-const musicIcon = document.getElementById("musicIcon");
-const musicText = document.getElementById("musicText");
-let playing = false;
-
-musicBtn.addEventListener("click", () => {
-  if (!playing) {
-    music.play().then(() => {
-      musicIcon.textContent = "🔊";
-      musicText.textContent = "Playing For Ammi 🎶";
-      musicBtn.classList.add("playing");
-      playing = true;
-    }).catch(() => {
-      alert("Please add birthday-song.mp3 to the website folder.");
-    });
-  } else {
-    music.pause();
-    musicIcon.textContent = "🎵";
-    musicText.textContent = "Play Song For Ammi";
-    musicBtn.classList.remove("playing");
-    playing = false;
-  }
-});
+// Music Button Toggle Logic
+if (musicBtn) {
+  musicBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    if (!playing) {
+      playBirthdayMusic();
+    } else {
+      pauseBirthdayMusic();
+    }
+  });
+}
 
 // Open Your Surprise Button Logic
 const openSurpriseBtn = document.getElementById("openSurpriseBtn");
@@ -1850,16 +1987,7 @@ openSurpriseBtn.addEventListener("click", (e) => {
   restOfSurprise.classList.add("revealed");
 
   // 2. Play birthday song automatically
-  if (!playing) {
-    music.play().then(() => {
-      musicIcon.textContent = "🔊";
-      musicText.textContent = "Playing For Ammi 🎶";
-      musicBtn.classList.add("playing");
-      playing = true;
-    }).catch(() => {
-      // Audio playback will wait for user interaction
-    });
-  }
+  playBirthdayMusic();
 
   // 3. Launch celebration explosions
   launchConfetti();
