@@ -1848,7 +1848,7 @@ footer span {
 
       <div class="lock-hint" id="lockHint">Hold the Lock for 5 seconds to unlock ❤️</div>
       
-      <div class="lock-sound-hint">🔊 Turn up phone volume & turn off Silent/Mute switch for music 🎶</div>
+      <div class="lock-sound-hint" id="lockSoundHint" role="button" tabindex="0" title="Tap to start birthday song">🔊 Tap here or touch lock for music • Turn off Silent switch 🎶</div>
     </div>
 
   </div>
@@ -1862,9 +1862,9 @@ footer span {
     <span id="musicText">Play Song For Ammi</span>
   </button>
 </div>
-<audio id="music" autoplay loop preload="auto" playsinline webkit-playsinline src="./birthday-song.mp3">
-  <source src="./birthday-song.mp3" type="audio/mpeg">
+<audio id="music" loop preload="auto" playsinline webkit-playsinline src="/birthday-song.mp3">
   <source src="/birthday-song.mp3" type="audio/mpeg">
+  <source src="./birthday-song.mp3" type="audio/mpeg">
 </audio>
 
 <!-- Hero Section with Ammi's Portrait -->
@@ -2217,24 +2217,51 @@ function getAudioContext() {
   return audioCtx;
 }
 
-// Pre-fetch and decode /birthday-song.mp3 in the background so mobile has zero buffer lag
-fetch("/birthday-song.mp3")
-  .then(res => res.arrayBuffer())
-  .then(buffer => {
-    const ctx = getAudioContext();
-    if (ctx) {
-      return ctx.decodeAudioData(buffer);
-    }
-  })
-  .then(decoded => {
-    if (decoded) {
-      audioBuffer = decoded;
-      isAudioBufferLoaded = true;
-    }
-  })
-  .catch(err => {
-    console.log("Web Audio buffer note:", err);
-  });
+// Bulletproof Dual-Engine Audio Player (HTML5 Audio + Web Audio API Fallback for Vercel & Mobile)
+let audioBufferPromise = null;
+
+function loadAudioBuffer() {
+  if (audioBuffer) return Promise.resolve(audioBuffer);
+  if (audioBufferPromise) return audioBufferPromise;
+
+  const ctx = getAudioContext();
+  if (!ctx) return Promise.reject("No AudioContext");
+
+  const paths = ["/birthday-song.mp3", "./birthday-song.mp3", "birthday-song.mp3"];
+  function tryFetch(i) {
+    if (i >= paths.length) return Promise.reject("All audio paths failed");
+    return fetch(paths[i])
+      .then(res => {
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return res.arrayBuffer();
+      })
+      .catch(() => tryFetch(i + 1));
+  }
+
+  audioBufferPromise = tryFetch(0)
+    .then(buffer => {
+      return new Promise((resolve, reject) => {
+        ctx.decodeAudioData(buffer, (decoded) => {
+          audioBuffer = decoded;
+          isAudioBufferLoaded = true;
+          resolve(decoded);
+        }, (err) => {
+          console.warn("Decode audio note:", err);
+          reject(err);
+        });
+      });
+    })
+    .catch(err => {
+      console.warn("Audio buffer load note:", err);
+      audioBufferPromise = null;
+      throw err;
+    });
+
+  return audioBufferPromise;
+}
+
+// Start prefetching audio buffer in background
+loadAudioBuffer().catch(() => {});
 
 function setMusicPlayingUI(isPlaying) {
   playing = isPlaying;
@@ -2261,30 +2288,44 @@ if (music) {
     music.currentTime = 0;
     music.play().catch(() => {});
   });
+  music.addEventListener("error", (e) => {
+    console.warn("HTML5 audio error on src:", music.currentSrc, e);
+    // Try Web Audio fallback if HTML5 fails
+    playWithWebAudio();
+  });
 }
 
 function playWithWebAudio() {
   const ctx = getAudioContext();
-  if (!ctx || !audioBuffer) return false;
+  if (!ctx) return false;
+  if (ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
   if (isWebAudioPlaying) return true;
 
-  try {
-    if (ctx.state === "suspended") {
-      ctx.resume();
+  if (audioBuffer) {
+    try {
+      if (audioSourceNode) {
+        try { audioSourceNode.stop(); } catch (e) {}
+      }
+      audioSourceNode = ctx.createBufferSource();
+      audioSourceNode.buffer = audioBuffer;
+      audioSourceNode.loop = true;
+      audioSourceNode.connect(ctx.destination);
+      audioSourceNode.start(0);
+      isWebAudioPlaying = true;
+      setMusicPlayingUI(true);
+      return true;
+    } catch (err) {
+      console.warn("WebAudio start error:", err);
+      return false;
     }
-    if (audioSourceNode) {
-      try { audioSourceNode.stop(); } catch (e) {}
-    }
-    audioSourceNode = ctx.createBufferSource();
-    audioSourceNode.buffer = audioBuffer;
-    audioSourceNode.loop = true;
-    audioSourceNode.connect(ctx.destination);
-    audioSourceNode.start(0);
-    isWebAudioPlaying = true;
-    setMusicPlayingUI(true);
-    return true;
-  } catch (err) {
-    console.warn("WebAudio start note:", err);
+  } else {
+    loadAudioBuffer().then(() => {
+      if (!playing && (!music || music.paused)) {
+        playWithWebAudio();
+      }
+    }).catch(() => {});
     return false;
   }
 }
@@ -2302,13 +2343,22 @@ function playBirthdayMusic() {
   if (playing) return;
 
   // Wake up Web Audio Context immediately during the user gesture!
-  getAudioContext();
+  const ctx = getAudioContext();
+  if (ctx && ctx.state === "suspended") {
+    ctx.resume().catch(() => {});
+  }
 
   let html5Started = false;
 
   // Try HTML5 Audio First
   if (music) {
-    try { music.volume = 1.0; } catch (e) {}
+    try {
+      music.muted = false;
+      music.volume = 1.0;
+      if (music.readyState === 0) {
+        music.load();
+      }
+    } catch (e) {}
     const playPromise = music.play();
     if (playPromise !== undefined) {
       playPromise.then(() => {
@@ -2316,10 +2366,7 @@ function playBirthdayMusic() {
         setMusicPlayingUI(true);
       }).catch((err) => {
         console.warn("HTML5 audio playback blocked/delayed on mobile, falling back to Web Audio:", err);
-        // If HTML5 audio is blocked by mobile Safari / Chrome, start Web Audio buffer
-        if (!playWithWebAudio()) {
-          setMusicPlayingUI(false);
-        }
+        playWithWebAudio();
       });
       return;
     }
@@ -2459,9 +2506,6 @@ function startHold(e) {
   if (isUnlocked) return;
   if (e) {
     e.stopPropagation();
-    if (e.cancelable && e.type && e.type.startsWith("touch")) {
-      e.preventDefault();
-    }
     if (e.pointerId !== undefined && lockHeartBtn && lockHeartBtn.setPointerCapture) {
       try {
         lockHeartBtn.setPointerCapture(e.pointerId);
@@ -2669,9 +2713,8 @@ if (lockHeartBtn) {
 
   // Also bind touch events for mobile safety
   lockHeartBtn.addEventListener("touchstart", (e) => {
-    if (e.cancelable) e.preventDefault();
     startHold(e);
-  }, { passive: false });
+  }, { passive: true });
   lockHeartBtn.addEventListener("touchend", cancelHold);
   lockHeartBtn.addEventListener("touchcancel", cancelHold);
 
@@ -2691,6 +2734,17 @@ if (lockHeartBtn) {
       cancelHold(e);
     }
   });
+}
+
+const lockSoundHint = document.getElementById("lockSoundHint");
+if (lockSoundHint) {
+  const triggerHintMusic = (e) => {
+    e.stopPropagation();
+    playBirthdayMusic();
+    lockSoundHint.textContent = "🎶 Birthday Song Playing for Ammi! 💖";
+  };
+  lockSoundHint.addEventListener("click", triggerHintMusic);
+  lockSoundHint.addEventListener("touchend", triggerHintMusic);
 }
 
 if (lockNotification) {
