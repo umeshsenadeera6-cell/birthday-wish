@@ -1504,8 +1504,8 @@ footer span {
     <span id="musicText">Play Song For Ammi</span>
   </button>
 </div>
-<audio id="music" loop preload="auto" playsinline webkit-playsinline autoplay src="birthday-song.mp3?v=2">
-  <source src="birthday-song.mp3?v=2" type="audio/mpeg">
+<audio id="music" loop preload="auto" playsinline webkit-playsinline src="birthday-song.mp3">
+  <source src="birthday-song.mp3" type="audio/mpeg">
 </audio>
 
 <!-- Hero Section with Ammi's Portrait -->
@@ -1771,7 +1771,45 @@ const musicIcon = document.getElementById("musicIcon");
 const musicText = document.getElementById("musicText");
 let playing = false;
 
-// Web Audio API & Synth chimes removed - Pure MP3 playback
+// Bulletproof Dual-Engine Audio Player (HTML5 Audio + Web Audio API Fallback for 100% Mobile Reliability)
+let audioCtx = null;
+let audioBuffer = null;
+let audioSourceNode = null;
+let isWebAudioPlaying = false;
+let isAudioBufferLoaded = false;
+
+function getAudioContext() {
+  if (!audioCtx) {
+    const AudioContextClass = window.AudioContext || window.webkitAudioContext;
+    if (AudioContextClass) {
+      audioCtx = new AudioContextClass();
+    }
+  }
+  if (audioCtx && audioCtx.state === "suspended") {
+    audioCtx.resume();
+  }
+  return audioCtx;
+}
+
+// Pre-fetch and decode birthday-song.mp3 in the background so mobile has zero buffer lag
+fetch("birthday-song.mp3")
+  .then(res => res.arrayBuffer())
+  .then(buffer => {
+    const ctx = getAudioContext();
+    if (ctx) {
+      return ctx.decodeAudioData(buffer);
+    }
+  })
+  .then(decoded => {
+    if (decoded) {
+      audioBuffer = decoded;
+      isAudioBufferLoaded = true;
+    }
+  })
+  .catch(err => {
+    console.log("Web Audio buffer note:", err);
+  });
+
 function setMusicPlayingUI(isPlaying) {
   playing = isPlaying;
   if (musicBtn && musicIcon && musicText) {
@@ -1787,46 +1825,117 @@ function setMusicPlayingUI(isPlaying) {
   }
 }
 
-// Keep audio state in sync with actual audio element
+// Keep audio state in sync with HTML5 audio
 if (music) {
   music.addEventListener("play", () => setMusicPlayingUI(true));
-  music.addEventListener("pause", () => setMusicPlayingUI(false));
+  music.addEventListener("pause", () => {
+    if (!isWebAudioPlaying) setMusicPlayingUI(false);
+  });
   music.addEventListener("ended", () => {
     music.currentTime = 0;
     music.play().catch(() => {});
   });
 }
 
+function playWithWebAudio() {
+  const ctx = getAudioContext();
+  if (!ctx || !audioBuffer) return false;
+  if (isWebAudioPlaying) return true;
+
+  try {
+    if (ctx.state === "suspended") {
+      ctx.resume();
+    }
+    if (audioSourceNode) {
+      try { audioSourceNode.stop(); } catch (e) {}
+    }
+    audioSourceNode = ctx.createBufferSource();
+    audioSourceNode.buffer = audioBuffer;
+    audioSourceNode.loop = true;
+    audioSourceNode.connect(ctx.destination);
+    audioSourceNode.start(0);
+    isWebAudioPlaying = true;
+    setMusicPlayingUI(true);
+    return true;
+  } catch (err) {
+    console.warn("WebAudio start note:", err);
+    return false;
+  }
+}
+
+function stopWebAudio() {
+  if (audioSourceNode && isWebAudioPlaying) {
+    try {
+      audioSourceNode.stop();
+    } catch (e) {}
+    isWebAudioPlaying = false;
+  }
+}
+
 function playBirthdayMusic() {
-  if (!music) return;
   if (playing) return;
 
-  music.volume = 1.0;
-  const playPromise = music.play();
-  if (playPromise !== undefined) {
-    playPromise.then(() => {
-      setMusicPlayingUI(true);
-    }).catch((err) => {
-      console.log("Autoplay waiting for user gesture:", err);
-    });
+  // Wake up Web Audio Context immediately during the user gesture!
+  getAudioContext();
+
+  let html5Started = false;
+
+  // Try HTML5 Audio First
+  if (music) {
+    try { music.volume = 1.0; } catch (e) {}
+    const playPromise = music.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        html5Started = true;
+        setMusicPlayingUI(true);
+      }).catch((err) => {
+        console.warn("HTML5 audio playback blocked/delayed on mobile, falling back to Web Audio:", err);
+        // If HTML5 audio is blocked by mobile Safari / Chrome, start Web Audio buffer
+        if (!playWithWebAudio()) {
+          setMusicPlayingUI(false);
+        }
+      });
+      return;
+    }
+  }
+
+  // Fallback to Web Audio if HTML5 not ready
+  if (!html5Started) {
+    playWithWebAudio();
   }
 }
 
 function pauseBirthdayMusic() {
   if (music) {
-    music.pause();
+    try { music.pause(); } catch (e) {}
   }
+  stopWebAudio();
   setMusicPlayingUI(false);
 }
 
-// Pre-unlock audio on first touch
-let mobileAudioPrimed = false;
-function primeMobileAudio() {
-  if (mobileAudioPrimed) return;
-  mobileAudioPrimed = true;
-  if (music) {
-    music.load();
+// Debounced Music Button Toggle (Prevents mobile touchend + click double-trigger)
+let lastToggleTime = 0;
+function toggleBirthdayMusic(e) {
+  if (e) {
+    e.stopPropagation();
+    if (e.cancelable && e.type === "touchend") {
+      e.preventDefault();
+    }
   }
+  const now = Date.now();
+  if (now - lastToggleTime < 350) return;
+  lastToggleTime = now;
+
+  if (!playing) {
+    playBirthdayMusic();
+  } else {
+    pauseBirthdayMusic();
+  }
+}
+
+if (musicBtn) {
+  musicBtn.addEventListener("touchend", toggleBirthdayMusic);
+  musicBtn.addEventListener("click", toggleBirthdayMusic);
 }
 
 // Immediate Autoplay and First Gesture Trigger
@@ -1834,25 +1943,25 @@ let hasInteractedForAudio = false;
 function triggerAutoplayOnGesture() {
   if (hasInteractedForAudio) return;
   hasInteractedForAudio = true;
-  primeMobileAudio();
-  if (music && !playing) {
+  getAudioContext();
+  if (!playing) {
     playBirthdayMusic();
   }
 }
 
-["click", "touchstart", "pointerdown", "keydown", "scroll"].forEach(evt => {
+["click", "touchstart", "pointerdown", "keydown"].forEach(evt => {
   window.addEventListener(evt, triggerAutoplayOnGesture, { once: true, passive: true });
 });
 
 window.addEventListener("DOMContentLoaded", () => {
   if (music) {
-    music.volume = 1.0;
+    try { music.volume = 1.0; } catch (e) {}
     playBirthdayMusic();
   }
 });
 
 window.addEventListener("load", () => {
-  if (music && !playing) {
+  if (!playing) {
     playBirthdayMusic();
   }
 });
@@ -1886,23 +1995,24 @@ const lockIcon = document.getElementById("lockIcon");
 let isUnlocked = false;
 
 function unlockSite(e) {
-  if (e && e.cancelable && e.type === "touchend") {
-    e.preventDefault();
+  if (e) {
+    e.stopPropagation();
+    if (e.cancelable && e.type === "touchend") {
+      e.preventDefault();
+    }
   }
   if (isUnlocked) return;
   isUnlocked = true;
 
-  // Prime mobile audio immediately
-  primeMobileAudio();
+  // Wake AudioContext and play birthday music IMMEDIATELY on the mobile user gesture!
+  getAudioContext();
+  playBirthdayMusic();
 
   // Change lock icon to open and heart
   if (lockIcon) {
     lockIcon.textContent = "🔓";
     setTimeout(() => { lockIcon.textContent = "💖"; }, 250);
   }
-
-  // Play birthday music IMMEDIATELY upon unlock user interaction
-  playBirthdayMusic();
 
   // Confetti and floating hearts burst
   launchConfetti();
@@ -1918,38 +2028,26 @@ function unlockSite(e) {
 }
 
 if (lockHeartBtn) {
-  lockHeartBtn.addEventListener("touchend", (e) => { e.stopPropagation(); unlockSite(e); });
-  lockHeartBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(e); });
+  lockHeartBtn.addEventListener("touchend", unlockSite);
+  lockHeartBtn.addEventListener("click", unlockSite);
 }
 if (unlockBtn) {
-  unlockBtn.addEventListener("touchend", (e) => { e.stopPropagation(); unlockSite(e); });
-  unlockBtn.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(e); });
+  unlockBtn.addEventListener("touchend", unlockSite);
+  unlockBtn.addEventListener("click", unlockSite);
 }
 if (lockNotification) {
-  lockNotification.addEventListener("touchend", (e) => { e.stopPropagation(); unlockSite(e); });
-  lockNotification.addEventListener("click", (e) => { e.stopPropagation(); unlockSite(e); });
+  lockNotification.addEventListener("touchend", unlockSite);
+  lockNotification.addEventListener("click", unlockSite);
 }
 if (lockscreen) {
-  lockscreen.addEventListener("touchend", (e) => { unlockSite(e); });
-  lockscreen.addEventListener("click", (e) => { unlockSite(e); });
-}
-
-// Music Button Toggle Logic
-if (musicBtn) {
-  musicBtn.addEventListener("touchend", (e) => {
-    e.stopPropagation();
-    if (!playing) {
-      playBirthdayMusic();
-    } else {
-      pauseBirthdayMusic();
+  lockscreen.addEventListener("touchend", (e) => {
+    if (e.target === lockscreen || (e.target && e.target.classList && e.target.classList.contains("lockscreen-backdrop"))) {
+      unlockSite(e);
     }
   });
-  musicBtn.addEventListener("click", (e) => {
-    e.stopPropagation();
-    if (!playing) {
-      playBirthdayMusic();
-    } else {
-      pauseBirthdayMusic();
+  lockscreen.addEventListener("click", (e) => {
+    if (e.target === lockscreen || (e.target && e.target.classList && e.target.classList.contains("lockscreen-backdrop"))) {
+      unlockSite(e);
     }
   });
 }
