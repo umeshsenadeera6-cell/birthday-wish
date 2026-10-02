@@ -912,6 +912,242 @@ body::before {
   text-align: center;
 }
 
+/* Special Video Surprise Card & Player */
+.video-card {
+  padding: 42px 28px;
+  border-radius: 36px;
+  background: linear-gradient(145deg, rgba(255, 195, 225, 0.16), rgba(244, 63, 122, 0.10));
+  border: 1px solid rgba(255, 190, 220, 0.45);
+  box-shadow: 0 30px 80px rgba(244, 63, 122, 0.35), inset 0 1px 1px rgba(255, 255, 255, 0.4);
+  position: relative;
+  text-align: center;
+  overflow: hidden;
+}
+
+.video-title {
+  font-family: 'Great Vibes', cursive;
+  font-size: clamp(38px, 6.5vw, 56px);
+  color: var(--pink-100);
+  margin: 15px 0 10px;
+  text-shadow: 0 0 25px rgba(255, 110, 160, 0.5);
+  line-height: 1.2;
+}
+
+.video-desc {
+  color: #fce4ec;
+  font-size: 15px;
+  font-weight: 300;
+  margin-bottom: 24px;
+  line-height: 1.6;
+}
+
+.video-container {
+  position: relative;
+  width: 100%;
+  max-width: 740px;
+  margin: 0 auto;
+  border-radius: 24px;
+  padding: 8px;
+  background: linear-gradient(135deg, rgba(255, 180, 210, 0.4), rgba(244, 63, 122, 0.2), rgba(255, 255, 255, 0.15));
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4), 0 0 35px rgba(244, 63, 122, 0.35);
+  overflow: hidden;
+}
+
+.video-container video {
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 70vh;
+  object-fit: contain;
+  background: #080208;
+  border-radius: 18px;
+  display: block;
+}
+
+/* Big Glowing Play Overlay */
+.video-play-overlay {
+  position: absolute;
+  inset: 8px;
+  border-radius: 18px;
+  background: rgba(18, 4, 16, 0.68);
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  cursor: pointer;
+  transition: opacity 0.35s ease, visibility 0.35s ease;
+  z-index: 6;
+}
+
+.video-play-overlay.hidden {
+  opacity: 0;
+  pointer-events: none;
+  visibility: hidden;
+}
+
+.video-play-pulse {
+  width: 82px;
+  height: 82px;
+  border-radius: 50%;
+  border: none;
+  background: linear-gradient(135deg, #f43f7a, #ff6e99);
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  box-shadow: 0 0 0 0 rgba(244, 63, 122, 0.7);
+  animation: playPulseAnim 2s infinite;
+  transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+}
+
+.video-play-pulse svg {
+  margin-left: 5px;
+  filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.4));
+}
+
+@keyframes playPulseAnim {
+  0% { box-shadow: 0 0 0 0 rgba(244, 63, 122, 0.7); transform: scale(0.96); }
+  70% { box-shadow: 0 0 0 24px rgba(244, 63, 122, 0); transform: scale(1.05); }
+  100% { box-shadow: 0 0 0 0 rgba(244, 63, 122, 0); transform: scale(0.96); }
+}
+
+.video-play-overlay:hover .video-play-pulse {
+  transform: scale(1.12);
+  background: linear-gradient(135deg, #ff1a6c, #ff85ad);
+}
+
+.video-play-hint {
+  font-size: 15px;
+  font-weight: 500;
+  color: #fff;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.7);
+  letter-spacing: 0.5px;
+}
+
+/* Fallback Banner */
+.video-fallback-banner {
+  position: absolute;
+  inset: 8px;
+  border-radius: 18px;
+  background: rgba(22, 6, 20, 0.94);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  padding: 30px 20px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  z-index: 7;
+  text-align: center;
+}
+
+.video-fallback-icon {
+  font-size: 48px;
+  filter: drop-shadow(0 0 15px rgba(244, 63, 122, 0.6));
+  animation: pulseBeat 2s infinite;
+}
+
+.video-fallback-text {
+  font-size: 14px;
+  color: #f7e6ee;
+  max-width: 480px;
+  line-height: 1.6;
+}
+
+.video-fallback-text code {
+  background: rgba(244, 63, 122, 0.3);
+  padding: 2px 8px;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+}
+
+.video-choose-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 24px;
+  border-radius: 50px;
+  background: linear-gradient(135deg, #f43f7a, #ff6e99);
+  color: #fff;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  box-shadow: 0 8px 25px rgba(244, 63, 122, 0.5);
+  transition: all 0.3s ease;
+}
+
+.video-choose-btn:hover {
+  transform: translateY(-2px) scale(1.03);
+  box-shadow: 0 12px 30px rgba(244, 63, 122, 0.7);
+}
+
+/* Action Toolbar */
+.video-action-bar {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 12px;
+  margin-top: 20px;
+}
+
+.video-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 20px;
+  border-radius: 50px;
+  border: 1px solid rgba(255, 180, 210, 0.45);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12), rgba(244, 63, 122, 0.18));
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  color: #fff;
+  font-size: 13px;
+  font-weight: 500;
+  font-family: 'Poppins', sans-serif;
+  cursor: pointer;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
+}
+
+.video-action-btn:hover {
+  background: linear-gradient(135deg, rgba(244, 63, 122, 0.45), rgba(255, 140, 180, 0.3));
+  border-color: rgba(255, 200, 225, 0.8);
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(244, 63, 122, 0.45);
+}
+
+.video-audio-note {
+  margin-top: 16px;
+  font-size: 12px;
+  color: var(--pink-200);
+  opacity: 0.9;
+  letter-spacing: 0.3px;
+}
+
+@media (max-width: 600px) {
+  .video-card {
+    padding: 30px 16px;
+    border-radius: 26px;
+  }
+  .video-container {
+    padding: 6px;
+    border-radius: 18px;
+  }
+  .video-container video {
+    border-radius: 14px;
+  }
+  .video-play-pulse {
+    width: 68px;
+    height: 68px;
+  }
+}
+
 .surprise-divider {
   display: flex;
   justify-content: center;
@@ -1831,6 +2067,73 @@ footer span {
 
   <div class="surprise" id="surprise">
     
+    <!-- 0. Special Surprise Video Card -->
+    <div class="surprise-card video-card" id="videoSurpriseCard">
+      <div class="title-pill">✨ The Special Surprise ✨</div>
+      <h3 class="video-title">Our Special Video For You 🎬❤️</h3>
+      <p class="video-desc">Every smile, every moment, and every memory of pure love...</p>
+
+      <div class="video-container" id="videoContainer">
+        <video id="surpriseVideo" playsinline webkit-playsinline controls preload="auto" poster="./ammi-roses.jpg">
+          <source src="/video.mp4" type="video/mp4">
+          <source src="./video.mp4" type="video/mp4">
+          <source src="/birthday-video.mp4" type="video/mp4">
+          <source src="./birthday-video.mp4" type="video/mp4">
+          Your browser does not support HTML5 video.
+        </video>
+
+        <!-- Big Glowing Play Overlay -->
+        <div class="video-play-overlay" id="videoPlayOverlay">
+          <button class="video-play-pulse" id="videoPlayPulseBtn" type="button" aria-label="Play Birthday Video">
+            <svg viewBox="0 0 24 24" width="38" height="38" fill="currentColor">
+              <path d="M8 5v14l11-7z"/>
+            </svg>
+          </button>
+          <div class="video-play-hint">Tap to Play with Sound 🔊</div>
+        </div>
+
+        <!-- Video Missing / Fallback Helper Banner -->
+        <div class="video-fallback-banner" id="videoFallbackBanner" style="display: none;">
+          <div class="video-fallback-icon">🎬</div>
+          <div class="video-fallback-text">
+            <strong>Ready for Ammi's Special Video!</strong><br>
+            Please place your video file as <code>public/video.mp4</code> or <code>video.mp4</code> in the project, or choose your video file from your device right now:
+          </div>
+          <label class="video-choose-btn">
+            <input type="file" id="videoFileInput" accept="video/*" style="display: none;">
+            <span>📁 Select Video from Device</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="video-action-bar">
+        <button class="video-action-btn" id="replayVideoBtn" type="button" title="Replay Video">
+          <span>🔄 Replay Video</span>
+        </button>
+        <button class="video-action-btn" id="theaterVideoBtn" type="button" title="Fullscreen / Theater Mode">
+          <span>⛶ Theater Mode</span>
+        </button>
+        <label class="video-action-btn" title="Choose another video file from your phone or PC" style="cursor: pointer; margin-bottom: 0;">
+          <input type="file" id="videoFileInputBar" accept="video/*" style="display: none;">
+          <span>📁 Choose Video File</span>
+        </label>
+      </div>
+
+      <div class="video-audio-note" id="videoAudioNote">
+        🎵 Background music automatically pauses so you can hear the video clearly!
+      </div>
+    </div>
+
+    <!-- Romantic Heart Sparkle Divider -->
+    <div class="surprise-divider">
+      <span>💖</span>
+      <span>✨</span>
+      <span>🌸</span>
+      <span>✨</span>
+      <span>💖</span>
+    </div>
+
     <!-- 1. One Little Promise Card -->
     <div class="surprise-card">
       <div class="title-pill">Our Special Promise</div>
@@ -2406,21 +2709,179 @@ openSurpriseBtn.addEventListener("click", (e) => {
   }, 400);
 });
 
-// Gift Interaction
+// Gift & Video Interaction
 const gift = document.getElementById("gift");
 const surprise = document.getElementById("surprise");
+const surpriseVideo = document.getElementById("surpriseVideo");
+const videoSurpriseCard = document.getElementById("videoSurpriseCard");
+const videoPlayOverlay = document.getElementById("videoPlayOverlay");
+const videoPlayPulseBtn = document.getElementById("videoPlayPulseBtn");
+const videoFallbackBanner = document.getElementById("videoFallbackBanner");
+const videoFileInput = document.getElementById("videoFileInput");
+const videoFileInputBar = document.getElementById("videoFileInputBar");
+const replayVideoBtn = document.getElementById("replayVideoBtn");
+const theaterVideoBtn = document.getElementById("theaterVideoBtn");
 
-gift.addEventListener("click", () => {
-  gift.classList.add("opened");
+let wasMusicPlayingBeforeVideo = false;
+let isGiftOpened = false;
+
+function openGiftAndPlayVideo(e) {
+  if (e) e.stopPropagation();
+
+  // Animate gift opened state
+  if (gift) gift.classList.add("opened");
   const hint = document.querySelector(".gift-hint");
   if (hint) {
     hint.innerHTML = "✨ Surprise Unwrapped with Endless Love! ✨";
   }
-  surprise.classList.add("show");
+
+  // Reveal surprise section
+  if (surprise) surprise.classList.add("show");
+
+  // Celebrate with confetti & hearts
   launchConfetti();
   launchBigHeartExplosion();
-  surprise.scrollIntoView({ behavior: "smooth", block: "start" });
-});
+
+  // Automatically pause background music so video audio is crystal clear
+  if (playing) {
+    wasMusicPlayingBeforeVideo = true;
+    pauseBirthdayMusic();
+  }
+
+  // Smooth scroll directly to the video card
+  setTimeout(() => {
+    if (videoSurpriseCard) {
+      videoSurpriseCard.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, 220);
+
+  // Play Video
+  if (surpriseVideo) {
+    if (surpriseVideo.error) {
+      showVideoFallback();
+    } else {
+      surpriseVideo.currentTime = 0;
+      const playPromise = surpriseVideo.play();
+      if (playPromise !== undefined) {
+        playPromise.then(() => {
+          if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
+        }).catch((err) => {
+          console.log("Video autoplay with sound needs tap interaction:", err);
+          if (videoPlayOverlay) videoPlayOverlay.classList.remove("hidden");
+        });
+      }
+    }
+  }
+
+  isGiftOpened = true;
+}
+
+function showVideoFallback() {
+  if (videoFallbackBanner) videoFallbackBanner.style.display = "flex";
+  if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
+}
+
+function startVideoWithSound() {
+  if (!surpriseVideo) return;
+  if (playing) {
+    wasMusicPlayingBeforeVideo = true;
+    pauseBirthdayMusic();
+  }
+  surpriseVideo.play().then(() => {
+    if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
+  }).catch((err) => {
+    console.warn("Could not play video:", err);
+    showVideoFallback();
+  });
+}
+
+function handleVideoFileSelection(e) {
+  const file = e.target && e.target.files && e.target.files[0];
+  if (!file || !surpriseVideo) return;
+
+  const objectUrl = URL.createObjectURL(file);
+  surpriseVideo.src = objectUrl;
+  surpriseVideo.load();
+  if (videoFallbackBanner) videoFallbackBanner.style.display = "none";
+  if (playing) {
+    wasMusicPlayingBeforeVideo = true;
+    pauseBirthdayMusic();
+  }
+  surpriseVideo.play().then(() => {
+    if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
+  }).catch(() => {
+    if (videoPlayOverlay) videoPlayOverlay.classList.remove("hidden");
+  });
+}
+
+if (gift) {
+  gift.addEventListener("click", openGiftAndPlayVideo);
+  gift.setAttribute("tabindex", "0");
+  gift.addEventListener("keydown", (e) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      openGiftAndPlayVideo(e);
+    }
+  });
+}
+
+if (videoPlayOverlay) {
+  videoPlayOverlay.addEventListener("click", startVideoWithSound);
+}
+if (videoPlayPulseBtn) {
+  videoPlayPulseBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    startVideoWithSound();
+  });
+}
+
+if (surpriseVideo) {
+  surpriseVideo.addEventListener("play", () => {
+    if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
+    if (playing) {
+      wasMusicPlayingBeforeVideo = true;
+      pauseBirthdayMusic();
+    }
+  });
+
+  surpriseVideo.addEventListener("ended", () => {
+    if (videoPlayOverlay) videoPlayOverlay.classList.remove("hidden");
+    launchConfetti();
+    if (wasMusicPlayingBeforeVideo) {
+      playBirthdayMusic();
+    }
+  });
+
+  surpriseVideo.addEventListener("error", () => {
+    showVideoFallback();
+  });
+}
+
+if (videoFileInput) {
+  videoFileInput.addEventListener("change", handleVideoFileSelection);
+}
+if (videoFileInputBar) {
+  videoFileInputBar.addEventListener("change", handleVideoFileSelection);
+}
+
+if (replayVideoBtn && surpriseVideo) {
+  replayVideoBtn.addEventListener("click", () => {
+    surpriseVideo.currentTime = 0;
+    startVideoWithSound();
+  });
+}
+
+if (theaterVideoBtn && surpriseVideo) {
+  theaterVideoBtn.addEventListener("click", () => {
+    if (surpriseVideo.requestFullscreen) {
+      surpriseVideo.requestFullscreen();
+    } else if (surpriseVideo.webkitRequestFullscreen) {
+      surpriseVideo.webkitRequestFullscreen();
+    } else if (surpriseVideo.msRequestFullscreen) {
+      surpriseVideo.msRequestFullscreen();
+    }
+  });
+}
 
 // Floating Hearts from Bottom
 function createHeart() {
