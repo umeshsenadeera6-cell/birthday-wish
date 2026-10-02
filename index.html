@@ -1346,13 +1346,53 @@ footer span {
   font-weight: 300;
 }
 
-/* Interactive Lock Area */
+/* Interactive Lock Area (5-Second Hold Unlock) */
 .lock-interactive-area {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 16px;
+  gap: 13px;
   width: 100%;
+}
+
+.lock-hold-wrapper {
+  position: relative;
+  width: 124px;
+  height: 124px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 4px 0 2px;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+
+.lock-progress-svg {
+  position: absolute;
+  inset: 0;
+  width: 124px;
+  height: 124px;
+  transform: rotate(-90deg);
+  pointer-events: none;
+  overflow: visible;
+}
+
+.lock-ring-bg {
+  fill: none;
+  stroke: rgba(255, 180, 215, 0.22);
+  stroke-width: 5;
+}
+
+.lock-ring-progress {
+  fill: none;
+  stroke: url(#lockRingGrad);
+  stroke-width: 5.5;
+  stroke-linecap: round;
+  stroke-dasharray: 333.01;
+  stroke-dashoffset: 333.01;
+  filter: drop-shadow(0 0 10px rgba(255, 60, 130, 0.95));
+  transition: stroke-dashoffset 0.05s linear;
 }
 
 .lock-heart-btn {
@@ -1363,17 +1403,50 @@ footer span {
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 40px;
+  font-size: 38px;
   cursor: pointer;
   position: relative;
   box-shadow: 0 14px 40px rgba(244, 63, 122, 0.6), 0 0 25px rgba(255, 120, 175, 0.45);
-  transition: all 0.4s cubic-bezier(0.16, 1, 0.3, 1);
-  border: 2px solid rgba(255, 255, 255, 0.75);
+  transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.25s ease, border-color 0.25s ease;
+  border: 2px solid rgba(255, 255, 255, 0.85);
+  touch-action: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+  outline: none;
 }
 
 .lock-heart-btn:hover {
-  transform: scale(1.12);
+  transform: scale(1.06);
   box-shadow: 0 18px 50px rgba(244, 63, 122, 0.8), 0 0 35px rgba(255, 150, 200, 0.65);
+}
+
+.lock-heart-btn.is-holding {
+  transform: scale(0.93);
+  box-shadow: 0 0 50px rgba(255, 60, 130, 0.95), 0 0 30px rgba(255, 255, 255, 0.8), inset 0 0 15px rgba(255, 255, 255, 0.5);
+  border-color: #fff;
+}
+
+.lock-heart-btn.is-holding .heart-icon-inner {
+  animation: lockVibrate 0.15s infinite alternate ease-in-out;
+}
+
+@keyframes lockVibrate {
+  0% { transform: scale(1) translate(-1px, 1px) rotate(-3deg); }
+  100% { transform: scale(1.08) translate(1px, -1px) rotate(3deg); }
+}
+
+.lock-heart-btn.shake {
+  animation: lockShake 0.45s cubic-bezier(0.36, 0.07, 0.19, 0.97) both;
+}
+
+@keyframes lockShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-9px) rotate(-4deg); }
+  40% { transform: translateX(9px) rotate(4deg); }
+  60% { transform: translateX(-6px) rotate(-2deg); }
+  80% { transform: translateX(6px) rotate(2deg); }
 }
 
 .heart-pulse-ring {
@@ -1389,6 +1462,11 @@ footer span {
   animation-delay: 1.25s;
 }
 
+.lock-heart-btn.is-holding .heart-pulse-ring {
+  animation-duration: 1.1s;
+  border-color: rgba(255, 255, 255, 0.85);
+}
+
 @keyframes heartPulse {
   0% {
     transform: scale(1);
@@ -1400,48 +1478,73 @@ footer span {
   }
 }
 
-.lock-hint {
-  font-size: 13px;
-  color: var(--pink-200);
-  letter-spacing: 1px;
-  animation: pulseBeat 2s infinite ease-in-out;
-}
-
-.unlock-slider-btn {
+.lock-timer-badge {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  gap: 12px;
-  width: 100%;
-  max-width: 320px;
-  padding: 15px 28px;
-  border-radius: 50px;
-  border: 1px solid rgba(255, 210, 235, 0.65);
+  gap: 8px;
+  padding: 8px 22px;
+  border-radius: 30px;
+  background: linear-gradient(135deg, rgba(244, 63, 122, 0.32), rgba(255, 140, 180, 0.18));
+  border: 1px solid rgba(255, 190, 220, 0.45);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  font-size: 13.5px;
+  font-weight: 600;
   color: #fff;
-  font-family: 'Poppins', sans-serif;
-  font-size: 14.5px;
-  font-weight: 500;
-  letter-spacing: 1px;
-  background: linear-gradient(135deg, rgba(244, 63, 122, 0.35), rgba(255, 130, 175, 0.2));
-  backdrop-filter: blur(15px);
-  -webkit-backdrop-filter: blur(15px);
-  box-shadow: 0 10px 30px rgba(244, 63, 122, 0.35);
-  cursor: pointer;
-  position: relative;
-  overflow: hidden;
-  transition: all 0.4s ease;
-  margin-top: 5px;
+  letter-spacing: 0.8px;
+  box-shadow: 0 6px 20px rgba(244, 63, 122, 0.25);
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
 }
 
-.unlock-slider-btn:hover {
-  transform: translateY(-3px) scale(1.03);
-  background: linear-gradient(135deg, #ff407a 0%, #e11d61 100%);
+.lock-timer-badge.holding {
   border-color: #fff;
+  background: linear-gradient(135deg, rgba(244, 63, 122, 0.7), rgba(255, 70, 140, 0.45));
+  box-shadow: 0 0 30px rgba(244, 63, 122, 0.75), 0 0 15px rgba(255, 255, 255, 0.4);
+  transform: scale(1.05);
+}
+
+.lock-progress-bar-container {
+  width: 220px;
+  height: 6px;
+  background: rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  overflow: hidden;
+  border: 1px solid rgba(255, 180, 210, 0.25);
+  box-shadow: inset 0 1px 3px rgba(0, 0, 0, 0.3);
+}
+
+.lock-progress-bar-fill {
+  width: 0%;
+  height: 100%;
+  background: linear-gradient(90deg, #ff85ab, #ff2e75, #ffffff);
+  border-radius: 10px;
+  box-shadow: 0 0 12px rgba(255, 80, 140, 0.9);
+  transition: width 0.05s linear;
+}
+
+.lock-hint {
+  font-size: 13.5px;
+  color: #ffe6f0;
+  letter-spacing: 0.5px;
+  font-weight: 500;
+  text-shadow: 0 2px 10px rgba(0, 0, 0, 0.4);
+  transition: color 0.3s ease;
+  min-height: 20px;
+}
+
+.lock-sinhala-hint {
+  font-size: 12px;
+  color: var(--pink-300);
+  letter-spacing: 0.5px;
+  margin-top: -6px;
+  opacity: 0.9;
+}
+
 .lock-sound-hint {
   font-size: 11px;
   color: rgba(255, 220, 235, 0.88);
   text-align: center;
-  margin-top: 6px;
+  margin-top: 4px;
   padding: 5px 14px;
   background: rgba(255, 255, 255, 0.08);
   border-radius: 20px;
@@ -1475,21 +1578,49 @@ footer span {
         <span class="notif-time">Just Now</span>
       </div>
       <div class="notif-title">A Birthday Surprise for our Ammi ❤️</div>
-      <div class="notif-body">We built a magical little world just for you. Tap below to unlock our hearts! ✨</div>
+      <div class="notif-body">We built a magical little world just for you. Hold the lock below for 5 seconds to unlock our hearts! ✨</div>
     </div>
 
-    <!-- Heart Keyhole & Unlock Trigger -->
+    <!-- Heart Keyhole & 5-Second Hold Unlock Trigger -->
     <div class="lock-interactive-area">
-      <div class="lock-heart-btn" id="lockHeartBtn" role="button" aria-label="Unlock with Love">
-        <div class="heart-pulse-ring"></div>
-        <div class="heart-pulse-ring delay"></div>
-        <div class="heart-icon-inner" id="lockIcon">🔒</div>
+      <div class="lock-hold-wrapper">
+        <svg class="lock-progress-svg" viewBox="0 0 120 120" aria-hidden="true">
+          <defs>
+            <linearGradient id="lockRingGrad" x1="0%" y1="0%" x2="100%" y2="100%">
+              <stop offset="0%" stop-color="#ffffff" />
+              <stop offset="50%" stop-color="#ff759f" />
+              <stop offset="100%" stop-color="#ff2e75" />
+            </linearGradient>
+            <filter id="ringGlow" x="-20%" y="-20%" width="140%" height="140%">
+              <feGaussianBlur stdDeviation="3" result="blur" />
+              <feComposite in="SourceGraphic" in2="blur" operator="over" />
+            </filter>
+          </defs>
+          <circle class="lock-ring-bg" cx="60" cy="60" r="53" />
+          <circle class="lock-ring-progress" id="lockRingProgress" cx="60" cy="60" r="53" />
+        </svg>
+
+        <div class="lock-heart-btn" id="lockHeartBtn" role="button" tabindex="0" aria-label="Hold Lock for 5 seconds to unlock">
+          <div class="heart-pulse-ring"></div>
+          <div class="heart-pulse-ring delay"></div>
+          <div class="heart-icon-inner" id="lockIcon">🔒</div>
+        </div>
       </div>
-      <div class="lock-hint">Tap the Heart to Unlock with Love ❤️</div>
+
+      <!-- Live Hold Countdown Badge -->
+      <div class="lock-timer-badge" id="lockTimerBadge">
+        <span class="lock-timer-icon" id="lockTimerIcon">⏳</span>
+        <span class="lock-timer-text" id="lockTimerText">Hold for 5s</span>
+      </div>
+
+      <!-- Linear progress bar -->
+      <div class="lock-progress-bar-container">
+        <div class="lock-progress-bar-fill" id="lockProgressBar"></div>
+      </div>
+
+      <div class="lock-hint" id="lockHint">Hold the Lock for 5 seconds to unlock ❤️</div>
+      <div class="lock-sinhala-hint" id="lockSinhalaHint">අගුල තත්පර 5ක් ඔබාගෙන සිටින්න 🔒</div>
       
-      <button class="unlock-slider-btn" id="unlockBtn">
-        <span>💖 Unlock My Surprise ✨</span>
-      </button>
       <div class="lock-sound-hint">🔊 Turn up phone volume & turn off Silent/Mute switch for music 🎶</div>
     </div>
 
@@ -1986,13 +2117,177 @@ function updateLockClock() {
 updateLockClock();
 setInterval(updateLockClock, 1000);
 
-// Lock Screen Unlock Action
+// Lock Screen Unlock Action (Hold for 5 seconds)
 const lockscreen = document.getElementById("lockscreen");
 const lockHeartBtn = document.getElementById("lockHeartBtn");
-const unlockBtn = document.getElementById("unlockBtn");
+const lockRingProgress = document.getElementById("lockRingProgress");
+const lockProgressBar = document.getElementById("lockProgressBar");
+const lockTimerBadge = document.getElementById("lockTimerBadge");
+const lockTimerText = document.getElementById("lockTimerText");
+const lockTimerIcon = document.getElementById("lockTimerIcon");
+const lockHint = document.getElementById("lockHint");
 const lockNotification = document.getElementById("lockNotification");
 const lockIcon = document.getElementById("lockIcon");
+
+const HOLD_DURATION = 5000; // 5000ms = 5 seconds
+const CIRCUMFERENCE = 333.01; // 2 * PI * 53
+let isHolding = false;
+let holdStartTime = 0;
+let holdAnimFrame = null;
 let isUnlocked = false;
+let activePointerId = null;
+
+function resetProgressVisuals() {
+  if (lockRingProgress) lockRingProgress.style.strokeDashoffset = CIRCUMFERENCE;
+  if (lockProgressBar) lockProgressBar.style.width = "0%";
+  if (lockTimerBadge) lockTimerBadge.classList.remove("holding");
+  if (lockTimerText) lockTimerText.textContent = "Hold for 5s";
+  if (lockTimerIcon) lockTimerIcon.textContent = "⏳";
+}
+
+function startHold(e) {
+  if (isUnlocked) return;
+  if (e) {
+    e.stopPropagation();
+    if (e.cancelable && e.type && e.type.startsWith("touch")) {
+      e.preventDefault();
+    }
+    if (e.pointerId !== undefined && lockHeartBtn && lockHeartBtn.setPointerCapture) {
+      try {
+        lockHeartBtn.setPointerCapture(e.pointerId);
+        activePointerId = e.pointerId;
+      } catch (err) {}
+    }
+  }
+
+  if (isHolding) return;
+  isHolding = true;
+  holdStartTime = performance.now();
+
+  // Prime Web Audio context on the immediate user gesture
+  getAudioContext();
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate(35); } catch (v) {}
+  }
+
+  if (lockHeartBtn) {
+    lockHeartBtn.classList.remove("shake");
+    lockHeartBtn.classList.add("is-holding");
+  }
+  if (lockTimerBadge) {
+    lockTimerBadge.classList.add("holding");
+  }
+
+  function step(now) {
+    if (!isHolding || isUnlocked) return;
+    const elapsed = now - holdStartTime;
+    const progress = Math.min(elapsed / HOLD_DURATION, 1);
+
+    if (lockRingProgress) {
+      lockRingProgress.style.strokeDashoffset = CIRCUMFERENCE * (1 - progress);
+    }
+    if (lockProgressBar) {
+      lockProgressBar.style.width = (progress * 100).toFixed(1) + "%";
+    }
+
+    const remainingSeconds = Math.max(0, (HOLD_DURATION - elapsed) / 1000);
+    if (lockTimerText) {
+      lockTimerText.textContent = remainingSeconds.toFixed(1) + "s";
+    }
+    if (lockTimerIcon) {
+      lockTimerIcon.textContent = "🔥";
+    }
+    if (lockHint) {
+      lockHint.textContent = `Holding... keep pressing! (${remainingSeconds.toFixed(1)}s)`;
+    }
+
+    if (progress >= 1) {
+      isHolding = false;
+      if (lockHeartBtn && activePointerId !== null && lockHeartBtn.releasePointerCapture) {
+        try { lockHeartBtn.releasePointerCapture(activePointerId); } catch (err) {}
+      }
+      activePointerId = null;
+      triggerUnlockSuccess();
+      return;
+    }
+
+    holdAnimFrame = requestAnimationFrame(step);
+  }
+
+  holdAnimFrame = requestAnimationFrame(step);
+}
+
+function cancelHold(e) {
+  if (isUnlocked || !isHolding) return;
+  if (e) {
+    e.stopPropagation();
+    if (activePointerId !== null && lockHeartBtn && lockHeartBtn.releasePointerCapture) {
+      try { lockHeartBtn.releasePointerCapture(activePointerId); } catch (err) {}
+    }
+    activePointerId = null;
+  }
+
+  isHolding = false;
+  if (holdAnimFrame) {
+    cancelAnimationFrame(holdAnimFrame);
+    holdAnimFrame = null;
+  }
+
+  const elapsed = performance.now() - holdStartTime;
+  if (lockHeartBtn) {
+    lockHeartBtn.classList.remove("is-holding");
+  }
+  resetProgressVisuals();
+
+  if (elapsed < HOLD_DURATION) {
+    if (lockHint) {
+      lockHint.textContent = "Hold for full 5 seconds to unlock ❤️";
+    }
+    if (lockHeartBtn) {
+      lockHeartBtn.classList.add("shake");
+      setTimeout(() => {
+        if (lockHeartBtn) lockHeartBtn.classList.remove("shake");
+      }, 500);
+    }
+    if (navigator.vibrate) {
+      try { navigator.vibrate([40, 50, 40]); } catch (v) {}
+    }
+  }
+}
+
+function triggerUnlockSuccess() {
+  if (isUnlocked) return;
+
+  if (lockRingProgress) lockRingProgress.style.strokeDashoffset = 0;
+  if (lockProgressBar) lockProgressBar.style.width = "100%";
+  if (lockTimerBadge) lockTimerBadge.classList.add("holding");
+  if (lockTimerIcon) lockTimerIcon.textContent = "💖";
+  if (lockTimerText) lockTimerText.textContent = "Unlocked!";
+  if (lockHint) lockHint.textContent = "Surprise Unlocked! ❤️✨";
+
+  if (navigator.vibrate) {
+    try { navigator.vibrate([60, 50, 100]); } catch (v) {}
+  }
+
+  unlockSite();
+}
+
+function remindToHoldLock(e) {
+  if (isUnlocked) return;
+  if (e) e.stopPropagation();
+  if (lockHeartBtn) {
+    lockHeartBtn.classList.remove("shake");
+    void lockHeartBtn.offsetWidth;
+    lockHeartBtn.classList.add("shake");
+    setTimeout(() => {
+      if (lockHeartBtn) lockHeartBtn.classList.remove("shake");
+    }, 500);
+  }
+  if (lockHint) {
+    lockHint.textContent = "Hold the Lock 🔒 for 5 seconds to unlock ❤️";
+  }
+}
 
 function unlockSite(e) {
   if (e) {
@@ -2004,7 +2299,7 @@ function unlockSite(e) {
   if (isUnlocked) return;
   isUnlocked = true;
 
-  // Wake AudioContext and play birthday music IMMEDIATELY on the mobile user gesture!
+  // Wake AudioContext and play birthday music IMMEDIATELY!
   getAudioContext();
   playBirthdayMusic();
 
@@ -2028,26 +2323,62 @@ function unlockSite(e) {
 }
 
 if (lockHeartBtn) {
-  lockHeartBtn.addEventListener("touchend", unlockSite);
-  lockHeartBtn.addEventListener("click", unlockSite);
-}
-if (unlockBtn) {
-  unlockBtn.addEventListener("touchend", unlockSite);
-  unlockBtn.addEventListener("click", unlockSite);
-}
-if (lockNotification) {
-  lockNotification.addEventListener("touchend", unlockSite);
-  lockNotification.addEventListener("click", unlockSite);
-}
-if (lockscreen) {
-  lockscreen.addEventListener("touchend", (e) => {
-    if (e.target === lockscreen || (e.target && e.target.classList && e.target.classList.contains("lockscreen-backdrop"))) {
-      unlockSite(e);
+  // Prevent context menu (long press popup on mobile)
+  lockHeartBtn.addEventListener("contextmenu", (e) => {
+    e.preventDefault();
+    return false;
+  });
+
+  // Pointer events handle both touch, mouse, and stylus seamlessly
+  lockHeartBtn.addEventListener("pointerdown", startHold);
+  lockHeartBtn.addEventListener("pointerup", cancelHold);
+  lockHeartBtn.addEventListener("pointercancel", cancelHold);
+  lockHeartBtn.addEventListener("pointerleave", (e) => {
+    if (!activePointerId) {
+      cancelHold(e);
     }
   });
+
+  // Also bind touch events for mobile safety
+  lockHeartBtn.addEventListener("touchstart", (e) => {
+    if (e.cancelable) e.preventDefault();
+    startHold(e);
+  }, { passive: false });
+  lockHeartBtn.addEventListener("touchend", cancelHold);
+  lockHeartBtn.addEventListener("touchcancel", cancelHold);
+
+  // Keyboard accessibility: hold Space or Enter
+  let keyHoldActive = false;
+  lockHeartBtn.addEventListener("keydown", (e) => {
+    if ((e.key === " " || e.key === "Enter") && !keyHoldActive) {
+      e.preventDefault();
+      keyHoldActive = true;
+      startHold(e);
+    }
+  });
+  lockHeartBtn.addEventListener("keyup", (e) => {
+    if (e.key === " " || e.key === "Enter") {
+      e.preventDefault();
+      keyHoldActive = false;
+      cancelHold(e);
+    }
+  });
+}
+
+if (lockNotification) {
+  lockNotification.addEventListener("click", remindToHoldLock);
+  lockNotification.addEventListener("touchend", remindToHoldLock);
+}
+
+if (lockscreen) {
   lockscreen.addEventListener("click", (e) => {
     if (e.target === lockscreen || (e.target && e.target.classList && e.target.classList.contains("lockscreen-backdrop"))) {
-      unlockSite(e);
+      remindToHoldLock(e);
+    }
+  });
+  lockscreen.addEventListener("touchend", (e) => {
+    if (e.target === lockscreen || (e.target && e.target.classList && e.target.classList.contains("lockscreen-backdrop"))) {
+      remindToHoldLock(e);
     }
   });
 }
