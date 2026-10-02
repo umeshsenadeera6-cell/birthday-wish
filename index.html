@@ -944,7 +944,7 @@ body::before {
 .video-container {
   position: relative;
   width: 100%;
-  max-width: 740px;
+  max-width: 480px;
   margin: 0 auto;
   border-radius: 24px;
   padding: 8px;
@@ -955,8 +955,8 @@ body::before {
 
 .video-container video {
   width: 100%;
-  aspect-ratio: 16 / 9;
-  max-height: 70vh;
+  aspect-ratio: 9 / 16;
+  max-height: 75vh;
   object-fit: contain;
   background: #080208;
   border-radius: 18px;
@@ -2074,11 +2074,11 @@ footer span {
       <p class="video-desc">Every smile, every moment, and every memory of pure love...</p>
 
       <div class="video-container" id="videoContainer">
-        <video id="surpriseVideo" playsinline webkit-playsinline controls preload="auto" poster="./ammi-roses.jpg">
-          <source src="/video.mp4" type="video/mp4">
+        <video id="surpriseVideo" src="./bday.mp4" playsinline webkit-playsinline x5-playsinline controls preload="auto" poster="./ammi-roses.jpg">
+          <source src="./bday.mp4" type="video/mp4">
+          <source src="/bday.mp4" type="video/mp4">
           <source src="./video.mp4" type="video/mp4">
-          <source src="/birthday-video.mp4" type="video/mp4">
-          <source src="./birthday-video.mp4" type="video/mp4">
+          <source src="/video.mp4" type="video/mp4">
           Your browser does not support HTML5 video.
         </video>
 
@@ -2726,52 +2726,70 @@ let wasMusicPlayingBeforeVideo = false;
 let isGiftOpened = false;
 
 function openGiftAndPlayVideo(e) {
-  if (e) e.stopPropagation();
+  if (e) {
+    e.stopPropagation();
+    if (e.cancelable && e.type === "touchend") {
+      e.preventDefault();
+    }
+  }
 
-  // Animate gift opened state
+  // 1. Reveal surprise section FIRST so #surprise has display: flex and video has valid layout dimensions
+  if (surprise) surprise.classList.add("show");
+
+  // 2. Animate gift opened state
   if (gift) gift.classList.add("opened");
   const hint = document.querySelector(".gift-hint");
   if (hint) {
     hint.innerHTML = "✨ Surprise Unwrapped with Endless Love! ✨";
   }
 
-  // Reveal surprise section
-  if (surprise) surprise.classList.add("show");
-
-  // Celebrate with confetti & hearts
-  launchConfetti();
-  launchBigHeartExplosion();
-
-  // Automatically pause background music so video audio is crystal clear
+  // 3. Automatically pause background music so video audio is crystal clear
   if (playing) {
     wasMusicPlayingBeforeVideo = true;
     pauseBirthdayMusic();
   }
 
-  // Smooth scroll directly to the video card
+  // 4. Trigger video playback immediately while user gesture is active
+  if (surpriseVideo) {
+    surpriseVideo.muted = false;
+    surpriseVideo.volume = 1.0;
+
+    if (surpriseVideo.readyState === 0) {
+      try { surpriseVideo.load(); } catch (err) {}
+    }
+
+    const playPromise = surpriseVideo.play();
+    if (playPromise !== undefined) {
+      playPromise.then(() => {
+        if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
+      }).catch((err) => {
+        console.warn("Unmuted autoplay restricted on mobile, starting muted and showing unmute button:", err);
+        // Fallback for mobile browsers in Low Power Mode or strict autoplay policy
+        surpriseVideo.muted = true;
+        surpriseVideo.play().then(() => {
+          if (videoPlayOverlay) {
+            videoPlayOverlay.classList.remove("hidden");
+            const hint = videoPlayOverlay.querySelector(".video-play-hint");
+            if (hint) hint.textContent = "🔊 Tap to Unmute Video!";
+          }
+        }).catch((err2) => {
+          console.warn("Video playback blocked by browser:", err2);
+          if (videoPlayOverlay) videoPlayOverlay.classList.remove("hidden");
+        });
+      });
+    }
+  }
+
+  // 5. Celebrate with confetti & hearts
+  launchConfetti();
+  launchBigHeartExplosion();
+
+  // 6. Smooth scroll directly to the video card
   setTimeout(() => {
     if (videoSurpriseCard) {
       videoSurpriseCard.scrollIntoView({ behavior: "smooth", block: "center" });
     }
-  }, 220);
-
-  // Play Video
-  if (surpriseVideo) {
-    if (surpriseVideo.error) {
-      showVideoFallback();
-    } else {
-      surpriseVideo.currentTime = 0;
-      const playPromise = surpriseVideo.play();
-      if (playPromise !== undefined) {
-        playPromise.then(() => {
-          if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
-        }).catch((err) => {
-          console.log("Video autoplay with sound needs tap interaction:", err);
-          if (videoPlayOverlay) videoPlayOverlay.classList.remove("hidden");
-        });
-      }
-    }
-  }
+  }, 180);
 
   isGiftOpened = true;
 }
@@ -2783,16 +2801,26 @@ function showVideoFallback() {
 
 function startVideoWithSound() {
   if (!surpriseVideo) return;
+  surpriseVideo.muted = false;
+  surpriseVideo.volume = 1.0;
   if (playing) {
     wasMusicPlayingBeforeVideo = true;
     pauseBirthdayMusic();
   }
-  surpriseVideo.play().then(() => {
-    if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
-  }).catch((err) => {
-    console.warn("Could not play video:", err);
-    showVideoFallback();
-  });
+  const p = surpriseVideo.play();
+  if (p !== undefined) {
+    p.then(() => {
+      if (videoPlayOverlay) videoPlayOverlay.classList.add("hidden");
+    }).catch((err) => {
+      console.warn("Could not play video with sound, trying muted:", err);
+      surpriseVideo.muted = true;
+      surpriseVideo.play().then(() => {
+        if (videoPlayOverlay) videoPlayOverlay.classList.remove("hidden");
+      }).catch(() => {
+        showVideoFallback();
+      });
+    });
+  }
 }
 
 function handleVideoFileSelection(e) {
@@ -2814,19 +2842,32 @@ function handleVideoFileSelection(e) {
   });
 }
 
+let lastGiftTouchTime = 0;
+function onGiftTrigger(e) {
+  const now = Date.now();
+  if (now - lastGiftTouchTime < 350) return;
+  lastGiftTouchTime = now;
+  openGiftAndPlayVideo(e);
+}
+
 if (gift) {
-  gift.addEventListener("click", openGiftAndPlayVideo);
+  gift.addEventListener("touchend", onGiftTrigger, { passive: false });
+  gift.addEventListener("click", onGiftTrigger);
   gift.setAttribute("tabindex", "0");
   gift.addEventListener("keydown", (e) => {
     if (e.key === "Enter" || e.key === " ") {
       e.preventDefault();
-      openGiftAndPlayVideo(e);
+      onGiftTrigger(e);
     }
   });
 }
 
 if (videoPlayOverlay) {
   videoPlayOverlay.addEventListener("click", startVideoWithSound);
+  videoPlayOverlay.addEventListener("touchend", (e) => {
+    if (e.cancelable) e.preventDefault();
+    startVideoWithSound();
+  }, { passive: false });
 }
 if (videoPlayPulseBtn) {
   videoPlayPulseBtn.addEventListener("click", (e) => {
@@ -2853,7 +2894,9 @@ if (surpriseVideo) {
   });
 
   surpriseVideo.addEventListener("error", () => {
-    showVideoFallback();
+    if (!surpriseVideo.currentSrc && surpriseVideo.networkState === HTMLMediaElement.NETWORK_NO_SOURCE) {
+      showVideoFallback();
+    }
   });
 }
 
